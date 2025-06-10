@@ -38,6 +38,7 @@
 use App\Models\Migrasi;
 use App\Models\SettingAplikasi;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 defined('BASEPATH') || exit('No direct script access allowed');
 
@@ -93,8 +94,8 @@ class Database_model extends MY_Model
         if (isset($this->session->sedang_restore) && $this->session->sedang_restore == 1) {
             return;
         }
-
-        $migratedDatabase = Migrasi::pluck('versi_database', 'versi_database')->toArray();
+        $doesntHaveMigrasiConfigId = ! Schema::hasColumn('migrasi', 'config_id');
+        $migratedDatabase          = Migrasi::when($doesntHaveMigrasiConfigId, static fn ($q) => $q->withoutConfigId())->pluck('versi_database', 'versi_database')->toArray();
 
         session_success();
         $versi          = (int) str_replace('.', '', $this->cekCurrentVersion());
@@ -125,13 +126,15 @@ class Database_model extends MY_Model
                     $migrateName = $matches[0];
                     if (! isset($migratedDatabase[$migrateName])) {
                         $this->jalankan_migrasi('Migrasi_' . $migrateName);
-                        $migrasiDb = Migrasi::firstOrCreate(['versi_database' => $migrateName]);
+                        // harus dicek ulang karena perubahan struktur tabel migrasi di dalam file migrasi 2025010171
+                        $doesntHaveMigrasiConfigId = ! Schema::hasColumn('migrasi', 'config_id');
+                        $migrasiDb                 = Migrasi::when($doesntHaveMigrasiConfigId, static fn ($q) => $q->withoutConfigId())->firstOrCreate(['versi_database' => $migrateName]);
                         $migrasiDb->update(['premium' => ['Migrasi_' . $migrateName]]);
                     }
                 }
             }
             // untuk mencegah kesalahan nama file migrasi, tambahkan record berdasarkan VERSI_DATABASE saat ini
-            $migrasiDb = Migrasi::firstOrCreate(['versi_database' => VERSI_DATABASE]);
+            $migrasiDb = Migrasi::when($doesntHaveMigrasiConfigId, static fn ($q) => $q->withoutConfigId())->firstOrCreate(['versi_database' => VERSI_DATABASE]);
             $migrasiDb->update(['premium' => ['Migrasi_' . VERSI_DATABASE]]);
         } catch (Exception $e) {
             log_message('error', $e->getMessage());
@@ -159,6 +162,10 @@ class Database_model extends MY_Model
         // delete cache list path view blade
         cache()->forget('views_blade');
 
+        // delete cache modul_aktif dan siappakai
+        cache()->forget('siappakai');
+        cache()->forget('modul_aktif');
+
         SettingAplikasi::withoutGlobalScope(App\Scopes\ConfigIdScope::class)->where('key', '=', 'current_version')->update(['value' => $currentVersion]);
         SettingAplikasi::where(['key' => 'compatible_version_general'])->update(['value' => PREMIUM ? versiUmumSetara($currentVersion) : null]);
         $this->load->model('track_model');
@@ -184,6 +191,8 @@ class Database_model extends MY_Model
         // Migrasi direkam di tabel migrasi
         if (Migrasi::where('versi_database', '=', VERSI_DATABASE)->doesntExist()) {
             $this->migrasi_db_cri($install);
+            // Kirim versi aplikasi ke layanan setelah migrasi selesai
+            kirim_versi_opensid();
         }
     }
 

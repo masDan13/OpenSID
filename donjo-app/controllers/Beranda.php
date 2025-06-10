@@ -36,6 +36,7 @@
  */
 
 use App\Libraries\Release;
+use App\Libraries\Saas;
 use App\Models\Shortcut;
 use App\Services\Pelanggan;
 
@@ -46,18 +47,19 @@ class Beranda extends Admin_Controller
     public $isAdmin;
     public $modul_ini           = 'beranda';
     public $kategori_pengaturan = 'Beranda';
+    protected $saas;
 
     public function __construct()
     {
         parent::__construct();
         $this->isAdmin = $this->session->isAdmin->pamong;
+        $this->saas    = new Saas();
     }
 
     public function index()
     {
         get_pesan_opendk(); //ambil pesan baru di opendk
 
-        $this->load->library('saas');
         $data = [
             'rilis'           => $this->getUpdate(),
             'shortcut'        => Shortcut::querys()['data'],
@@ -76,7 +78,7 @@ class Beranda extends Admin_Controller
             $url_rilis = config_item('rilis_umum');
 
             $release = new Release();
-            $release->setApiUrl($url_rilis)->setCurrentVersion();
+            $release->setApiUrl($url_rilis)->setCurrentVersion($this->versi_setara);
 
             if ($release->isAvailable()) {
                 $info['update_available'] = $release->isAvailable();
