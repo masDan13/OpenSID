@@ -8,6 +8,10 @@ if (typeof jQuery === 'undefined') {
   throw new Error('Bootstrap\'s JavaScript requires jQuery')
 }
 
+// Import DOMPurify for HTML sanitization
+// If using a bundler, ensure DOMPurify is installed and available
+var DOMPurify = window.DOMPurify;
+
 +function ($) {
   'use strict';
   var version = $.fn.jquery.split(' ')[0].split('.')
@@ -109,12 +113,12 @@ if (typeof jQuery === 'undefined') {
       selector = selector && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
     }
 
-    var $parent = $(selector === '#' ? [] : selector)
-
-    if (e) e.preventDefault()
-
-    if (!$parent.length) {
-      $parent = $this.closest('.alert')
+     var $parent = null;
+    // Only use selector if it is a safe id selector (starts with # and contains only allowed characters)
+    if (selector && /^#[A-Za-z0-9\-_:.]+$/.test(selector)) {
+      $parent = $(selector);
+    } else {
+      $parent = $this.closest('.alert');
     }
 
     $parent.trigger(e = $.Event('close.bs.alert'))
@@ -507,7 +511,8 @@ if (typeof jQuery === 'undefined') {
   var clickHandler = function (e) {
     var href
     var $this   = $(this)
-    var $target = $($this.attr('data-target') || (href = $this.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '')) // strip for ie7
+    var selector = $($this.attr('data-target') || (href = $this.attr('href')) && href.replace(/.*(?=#[^\s]+$)/, '')) // strip for ie7
+    var $target = $(document).find(selector) 
     if (!$target.hasClass('carousel')) return
     var options = $.extend({}, $target.data(), $this.data())
     var slideIndex = $this.attr('data-slide-to')
@@ -779,7 +784,7 @@ if (typeof jQuery === 'undefined') {
       selector = selector && /#[A-Za-z]/.test(selector) && selector.replace(/.*(?=#[^\s]*$)/, '') // strip for ie7
     }
 
-    var $parent = selector && $(selector)
+    var $parent = selector && $(document).find(selector)
 
     return $parent && $parent.length ? $parent : $this.parent()
   }
@@ -1238,7 +1243,14 @@ if (typeof jQuery === 'undefined') {
   $(document).on('click.bs.modal.data-api', '[data-toggle="modal"]', function (e) {
     var $this   = $(this)
     var href    = $this.attr('href')
-    var $target = $($this.attr('data-target') || (href && href.replace(/.*(?=#[^\s]+$)/, ''))) // strip for ie7
+    var selector = $this.attr('data-target') || (href && href.replace(/.*(?=#[^\s]+$)/, '')) // strip for ie7
+    var $target;
+    if (selector && /^#[A-Za-z][\w:.-]*$/.test(selector)) {
+      var targetEl = document.getElementById(selector.slice(1));
+      $target = targetEl ? $(targetEl) : $();
+    } else {
+      $target = $();
+    }
     var option  = $target.data('bs.modal') ? 'toggle' : $.extend({ remote: !/#/.test(href) && href }, $target.data(), $this.data())
 
     if ($this.is('a')) e.preventDefault()
@@ -1562,7 +1574,13 @@ if (typeof jQuery === 'undefined') {
     var $tip  = this.tip()
     var title = this.getTitle()
 
-    $tip.find('.tooltip-inner')[this.options.html ? 'html' : 'text'](title)
+    if (this.options.html) {
+      // Sanitize the title before inserting as HTML
+    var sanitizedTitle = DOMPurify ? DOMPurify.sanitize(title) : title;
+    $tip.find('.tooltip-inner').html(sanitizedTitle)
+  } else {
+    $tip.find('.tooltip-inner').text(title)
+  }
     $tip.removeClass('fade in top bottom left right')
   }
 
