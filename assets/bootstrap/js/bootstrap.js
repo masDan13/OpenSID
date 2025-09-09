@@ -2252,7 +2252,12 @@ var DOMPurify = window.DOMPurify;
      // Only treat a string as a selector, never as HTML
     if (typeof this.options.target === 'string') {
       this.$target = $(document).find(this.options.target)
-    } else {
+    } else if (this.options.target instanceof $) {
+      this.$target = this.options.target
+    } else if (this.options.target && (
+                (this.options.target.nodeType === 1) || // Element node
+                (this.options.target === window) || (this.options.target === document)
+              )) {
       this.$target = $(this.options.target)
     }
     this.$target
