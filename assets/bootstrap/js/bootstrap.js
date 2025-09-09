@@ -2249,7 +2249,13 @@ var DOMPurify = window.DOMPurify;
   var Affix = function (element, options) {
     this.options = $.extend({}, Affix.DEFAULTS, options)
 
-    this.$target = $(this.options.target)
+     // Only treat a string as a selector, never as HTML
+    if (typeof this.options.target === 'string') {
+      this.$target = $(document).find(this.options.target)
+    } else {
+      this.$target = $(this.options.target)
+    }
+    this.$target
       .on('scroll.bs.affix.data-api', $.proxy(this.checkPosition, this))
       .on('click.bs.affix.data-api',  $.proxy(this.checkPositionWithEventLoop, this))
 
