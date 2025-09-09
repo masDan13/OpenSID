@@ -5813,6 +5813,7 @@ function remove( elem, selector, keepData ) {
 
 jQuery.extend( {
 	htmlPrefilter: function( html ) {
+		// Removed unsafe self-closing tag expansion to prevent XSS.
 		return html;
 	},
 
