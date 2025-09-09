@@ -1319,7 +1319,28 @@ var DOMPurify = window.DOMPurify;
     this.type      = type
     this.$element  = $(element)
     this.options   = this.getOptions(options)
-    this.$viewport = this.options.viewport && $($.isFunction(this.options.viewport) ? this.options.viewport.call(this, this.$element) : (this.options.viewport.selector || this.options.viewport))
+    // Only interpret selector as a selector, not HTML. If viewport is a function, call it to get the selector/element; otherwise, get .selector or the viewport object itself
+    var viewport = this.options.viewport;
+    var selector = $.isFunction(viewport) 
+                  ? viewport.call(this, this.$element)
+                  : (viewport && (viewport.selector || viewport));
+    if (typeof selector === 'string') {
+        // If selector starts with '<', it could be treated as HTML and lead to XSS. Reject or ignore such values.
+        if (selector.trim().charAt(0) === '<') {
+            this.$viewport = $(); // Create empty jQuery set, ignore bad selector
+        } else {
+            // Use $.find to always treat string as a CSS selector, not HTML
+            this.$viewport = $(document).find(selector);
+        }
+    } else if (selector && (selector.nodeType === 1 || selector.nodeType === 9)) {
+        // DOM element or document
+        this.$viewport = $(selector);
+    } else if (viewport && viewport !== true) {
+        // If viewport is something else and not true, attempt to wrap in $
+        this.$viewport = $(viewport);
+    } else {
+        this.$viewport = $();
+    }
     this.inState   = { click: false, hover: false, focus: false }
 
     if (this.$element[0] instanceof document.constructor && !this.options.selector) {
