@@ -477,7 +477,7 @@ class Html5QrcodeScanner {
             statusClass = Html5QrcodeScanner.STATUS_DEFAULT;
         }
         const statusSpan = document.getElementById(this.__getStatusSpanId());
-        statusSpan.innerHTML = statusText;
+        statusSpan.textContent = statusText;
 
         switch (statusClass) {
             case Html5QrcodeScanner.STATUS_SUCCESS:
@@ -508,7 +508,7 @@ class Html5QrcodeScanner {
         }
         const messageDiv = document.getElementById(
             this.__getHeaderMessageContainerId());
-        messageDiv.innerHTML = messageText;
+        messageDiv.textContent = messageText;
         messageDiv.style.display = "block";
 
         switch (statusClass) {
