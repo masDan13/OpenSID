@@ -1324,13 +1324,15 @@ var DOMPurify = window.DOMPurify;
     var selector = $.isFunction(viewport) 
                   ? viewport.call(this, this.$element)
                   : (viewport && (viewport.selector || viewport));
+    
     if (typeof selector === 'string') {
         // If selector starts with '<', it could be treated as HTML and lead to XSS. Reject or ignore such values.
-        if (selector.trim().charAt(0) === '<') {
-            this.$viewport = $(); // Create empty jQuery set, ignore bad selector
+        var trimmedSelector = selector.trim();
+            if (trimmedSelector.length && trimmedSelector.charAt(0) === '<') {
+              this.$viewport = $();
         } else {
             // Use $.find to always treat string as a CSS selector, not HTML
-            this.$viewport = $(document).find(selector);
+            this.$viewport = $(document).find(trimmedSelector);
         }
     } else if (selector && (selector.nodeType === 1 || selector.nodeType === 9)) {
         // DOM element or document
